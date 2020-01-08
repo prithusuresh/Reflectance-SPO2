@@ -202,6 +202,7 @@ def calculate_R_from_cycle(signal, wlen, show = False):
             print ("Good")
 
         else:
+			
             return None
         final_valleys = np.concatenate([valley_groups_R, valley_groups_IR])
         final_valleys  = np.unique(final_valleys, axis = 1)
