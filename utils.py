@@ -167,7 +167,7 @@ def extract_cycles(data, show = True,harshness = 0.5):
             break
 
     
-    try: 
+try: 
         assert good_valleys!=[]
     except AssertionError:
         print ("Bad Signal")
@@ -225,7 +225,7 @@ def calculate_R_from_cycle(signal, wlen, show = False):
         R_ratio = ac_dc(R[0], final_peaks, final_valleys)
         IR_ratio = ac_dc(IR[0], final_peaks, final_valleys)
 		try:
-	    	assert R_ratio.shape == IR_ratio.shape
+			assert R_ratio.shape == IR_ratio.shape
 		except AssertionError:
 			IR_ratio = IR_ratio[:R_ratio.shape[0]]
 
