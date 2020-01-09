@@ -1,7 +1,6 @@
 import os
 import numpy as np 
 import pandas as pd
-from pprint import pprint 
 import pickle as pkl
 import scipy
 import scipy.signal
@@ -222,16 +221,20 @@ def calculate_R_from_cycle(signal, wlen, show = False):
 
         R_ratio = ac_dc(R[0], final_peaks, final_valleys)
         IR_ratio = ac_dc(IR[0], final_peaks, final_valleys)
+        
+        
+        if R_ratio is None or IR_ratio is None:
+            return None
+        else:
+            try:
+                assert R_ratio.shape == IR_ratio.shape
+            except AssertionError:
+                minimum= min(R_ratio.shape[0], IR_ratio.shape[0])
+                R_ratio = R_ratio[:minimum]
+                IR_ratio = IR_ratio[:minimum]                      
 
-        try:
-            assert R_ratio.shape == IR_ratio.shape
-        except AssertionError:
-            minimum= min(R_ratio.shape[0], IR_ratio.shape[0])
-            R_ratio = R_ratio[:minimum]
-            IR_ratio = IR_ratio[:minimum]                      
-
-        R_value = R_ratio/IR_ratio
-        return R_value
+            R_value = R_ratio/IR_ratio
+            return R_value
 
 def ac_dc(signal,peaks, val):
 
@@ -253,7 +256,8 @@ def ac_dc(signal,peaks, val):
         ac.append(signal[peaks[i]] - (signal[val[i][0]]+signal[val[i][1]])/2)
  
     print ("SHAPES MATCHING? :", len(dc),len(ac))
-
+    if len(ac) == 0 or len(dc) == 0:
+        return None
     ratio = np.array(ac)/np.array(dc)
 
   
