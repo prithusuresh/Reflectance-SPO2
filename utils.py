@@ -164,9 +164,7 @@ def extract_cycles(data, show = True,harshness = 0.5):
         if good_valleys == []:
             harshness +=0.1
         else:
-            break
-
-    
+            break    
     try: 
         assert good_valleys!=[]
     except AssertionError:
@@ -202,7 +200,6 @@ def calculate_R_from_cycle(signal, wlen, show = False):
             print ("Good")
 
         else:
-			
             return None
         final_valleys = np.concatenate([valley_groups_R, valley_groups_IR])
         final_valleys  = np.unique(final_valleys, axis = 1)
@@ -225,15 +222,15 @@ def calculate_R_from_cycle(signal, wlen, show = False):
 
         R_ratio = ac_dc(R[0], final_peaks, final_valleys)
         IR_ratio = ac_dc(IR[0], final_peaks, final_valleys)
-	    try:
-		    assert R_ratio.shape == IR_ratio.shape
-	    except AssertionError:
-            minimun = min(R_ratio.shape[0], IR_ratio.shape[0])
+
+        try:
+            assert R_ratio.shape == IR_ratio.shape
+        except AssertionError:
+            minimunm= min(R_ratio.shape[0], IR_ratio.shape[0])
             R_ratio = R_ratio[:minimum]
-            IR_ratio = IR_ratio[:minimum]
+            IR_ratio = IR_ratio[:minimum]                      
 
         R_value = R_ratio/IR_ratio
-
         return R_value
 
 def ac_dc(signal,peaks, val):
