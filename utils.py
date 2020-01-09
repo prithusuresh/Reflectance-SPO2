@@ -182,6 +182,9 @@ def extract_cycles(data, show = True,harshness = 0.5):
 def calculate_R_from_cycle(signal, wlen, show = False):
 
     """ Calculate Final R value """
+
+    
+
     R,IR = return_info(signal,wlen)
     corr = assess_quality(R,IR)
     peaks_R,valley_groups_R = extract_cycles(R)
@@ -220,7 +223,9 @@ def calculate_R_from_cycle(signal, wlen, show = False):
             plt.show()
 
         R_ratio = ac_dc(R[0], final_peaks, final_valleys)
+        calculate_R_from_cycle.R_components = [ac_dc.ac, ac_dc.dc]
         IR_ratio = ac_dc(IR[0], final_peaks, final_valleys)
+        calculate_R_from_cycle.IR_components = [ac_dc.ac, ac_dc.dc]
         
         
         if R_ratio is None or IR_ratio is None:
@@ -239,9 +244,9 @@ def calculate_R_from_cycle(signal, wlen, show = False):
 def ac_dc(signal,peaks, val):
 
     """ Get ac and dc component of each signal"""
-    dc = []
+    ac_dc.dc = []
 
-    ac = []
+    ac_dc.ac = []
 
     for i in range(val.shape[0]):
         try:
@@ -252,13 +257,14 @@ def ac_dc(signal,peaks, val):
         except IndexError:
             break
   
-        dc.append((signal[val[i][0]]+signal[val[i][1]])/2)
-        ac.append(signal[peaks[i]] - (signal[val[i][0]]+signal[val[i][1]])/2)
+        ac_dc.dc.append((signal[val[i][0]]+signal[val[i][1]])/2)
+        ac_dc.ac.append(signal[peaks[i]] - (signal[val[i][0]]+signal[val[i][1]])/2)
  
-    print ("SHAPES MATCHING? :", len(dc),len(ac))
-    if len(ac) == 0 or len(dc) == 0:
+    print ("SHAPES MATCHING? :", len(ac_dc.dc),len(ac_dc.ac))
+    if len(ac_dc.ac) == 0 or len(ac_dc.dc) == 0:
         return None
-    ratio = np.array(ac)/np.array(dc)
+
+    ratio = np.array(ac_dc.ac)/np.array(ac_dc.dc)
 
   
     return ratio
