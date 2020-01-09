@@ -226,7 +226,7 @@ def calculate_R_from_cycle(signal, wlen, show = False):
         try:
             assert R_ratio.shape == IR_ratio.shape
         except AssertionError:
-            minimunm= min(R_ratio.shape[0], IR_ratio.shape[0])
+            minimum= min(R_ratio.shape[0], IR_ratio.shape[0])
             R_ratio = R_ratio[:minimum]
             IR_ratio = IR_ratio[:minimum]                      
 
