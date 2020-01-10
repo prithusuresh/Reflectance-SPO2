@@ -9,10 +9,16 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 plt.rcParams["figure.figsize"] = [30,3]
 
-def fit_trendline(y, fs = 600):
+def detrend(signal):
+    R, IR = signal[:,0],signal[:,1]
+    R_detrended = fit_trendline(R)[0]
+    IR_detrended = fit_trendline(IR)[0]
 
+    signal = np.concatenate([R_detrended,IR_detrended], axis = 1)
+
+    return signal
+def fit_trendline(y, fs = 600): 
     '''Fit Trendline for detrending '''
-
     model = LinearRegression()
     X = np.array([j for j in range(len(y))])
 
@@ -22,7 +28,7 @@ def fit_trendline(y, fs = 600):
     pred = model.predict(x)
 
     t = X.reshape(len(X))/fs
-    return np.array([y[j] - pred[j] + np.mean(y) for j in range(X.shape[0])]), pred, t
+    return [np.array([y[j] - pred[j] + np.mean(y) for j in range(X.shape[0])]).reshape((-1,1)), pred, t]
 
 def smooth(signal,window_len=50):
     ''' Smoothen and detrend signal by removing 50 Hz using notch and Savitzky-Golay Filter for smoothening''' 
@@ -92,19 +98,23 @@ def discard_outliers(signal,peaks,valleys):
  
     return final_peak,final_val
 
-def return_info(signal,wlen, is_smooth = True):
-    """ Get smoothened signal, peak location and valley location """
-    R_signal = signal[:,0].reshape((-1,))
-    IR_signal = signal[:,1].reshape((-1,))
-    peaks_R, valleys_R = peaks_and_valleys(R_signal, is_smooth)
-    peaks_IR, valleys_IR = peaks_and_valleys(IR_signal, is_smooth)
+def return_info(signal,wlen, is_smooth):
+  """ Get smoothened signal, peak location and valley location 
+  Input: 
+    signal: RAW SIGNAL"""
+
+  detrended_signal = detrend(signal)
+  R_signal = detrended_signal[:,0].reshape((-1,))
+  IR_signal = detrended_signal[:,1].reshape((-1,))
+  peaks_R, valleys_R = peaks_and_valleys(R_signal, is_smooth)
+  peaks_IR, valleys_IR = peaks_and_valleys(IR_signal, is_smooth)
   
-    if peaks_R is None or valleys_R is None or peaks_IR is None or valleys_IR is None:
-        return [None, None, None], [None, None,None]
-    if is_smooth:
-        return [smooth(R_signal),peaks_R,valleys_R],[smooth(IR_signal),peaks_IR,valleys_IR]
-    else:
-        return [R_signal,peaks_R,valleys_R],[IR_signal,peaks_IR,valleys_IR]
+  if peaks_R is None or valleys_R is None or peaks_IR is None or valleys_IR is None:
+    return [None, None, None], [None, None,None]
+  if is_smooth:
+    return [smooth(signal[:,0]),peaks_R,valleys_R],[smooth(signal[:,1]),peaks_IR,valleys_IR]
+  else:
+    return [signal[:,0], peaks_R,valleys_R],[signal[:,1],peaks_IR,valleys_IR]
 
 def plot_signal(signal,wlen, is_smooth = True):
 
@@ -160,7 +170,7 @@ def extract_cycles(data, show = True,harshness = 0.5):
 
     while harshness <=1:
         good_valleys = [x for x in val if np.diff(x) > mean-harshness*std and np.diff(x) < mean+harshness*std]
-        if good_valleys == []:
+        if len(good_valleys)<3:
             harshness +=0.1
         else:
             break    
@@ -179,13 +189,57 @@ def extract_cycles(data, show = True,harshness = 0.5):
     return good_peaks, good_valleys
 
 
+def valley_matching(R_valleys, IR_valleys):
+  R_valleys = np.array(R_valleys, ndmin = 2)
+  IR_valleys = np.array(IR_valleys, ndmin = 2)
+
+  minimum = min(R_valleys.shape[0], IR_valleys.shape[0])
+  print (minimum)
+  dist = {0:[]}
+  for r in R_valleys:
+    for i in IR_valleys: 
+      if np.sum(abs(i-r)) <= 10:
+        loc = i
+
+        if not any(loc is x for x in dist[0]):
+          
+          dist[0].append(loc)
+  valleys = dist[0][:minimum]
+  print (valleys)
+  # /[dist[x][0] for x in np.sort(np.array(list(dist.keys())))[:minimum]]
+
+  return valleys
+
+
+def peak_matching(R_peaks, IR_peaks):
+  R_peaks = np.array(R_peaks)
+  IR_peaks = np.array(IR_peaks)
+  
+  minimum = min(R_peaks.shape[0], IR_peaks.shape[0])
+  print (minimum)
+  dist = {0:[]}
+  for r in R_peaks:
+    for i in IR_peaks: 
+      if np.sum(abs(i-r)) <= 10:
+        loc = i
+        if loc not in dist[0]:
+          dist[0].append(loc)
+  peaks = dist[0][:minimum]
+  # [dist[x][0] for x in np.sort(np.array(list(dist.keys())))[:minimum]]
+  peaks.sort()
+
+  return peaks
+
+
+
+
 def calculate_R_from_cycle(signal, wlen, show = False):
 
     """ Calculate Final R value """
 
     
 
-    R,IR = return_info(signal,wlen)
+    R,IR = return_info(signal,wlen, True)
     corr = assess_quality(R,IR)
     peaks_R,valley_groups_R = extract_cycles(R)
     peaks_IR,valley_groups_IR = extract_cycles(IR)
@@ -203,12 +257,14 @@ def calculate_R_from_cycle(signal, wlen, show = False):
 
         else:
             return None
-        final_valleys = np.concatenate([valley_groups_R, valley_groups_IR])
-        final_valleys  = np.unique(final_valleys, axis = 1)
-        final_peaks = np.union1d(peaks_R,peaks_IR)    
+        peaks_R,valley_groups_R = extract_cycles(R)
+        peaks_IR,valley_groups_IR = extract_cycles(IR)
 
+
+        final_valleys = np.array(valley_matching(valley_groups_R, valley_groups_IR))
+        final_peaks = list(set(peak_matching(peaks_R,peaks_IR)))
         if show:
-            unravel_val = list(set([x for y in final_valleys for x in y]))
+            unravel_val = list(set(final_valleys.ravel()))
             unravel_val.sort()
             plt.subplot(121)
             plt.title("Final cycles")
@@ -277,7 +333,6 @@ def calibrate_and_get_model(show = False):
     R_truth = np.array([float(x.split("\t")[1].rstrip("\n")) for x in points]).reshape((-1,1))
     SPO2_model = LinearRegression()
     SPO2_model.fit(np.concatenate([R_truth, R_truth**2],axis = 1), spo2)
-
     if show: 
         pred = SPO2_model.predict(np.concatenate([R_truth, R_truth**2],axis = 1))
         plt.plot(R_truth, pred)
